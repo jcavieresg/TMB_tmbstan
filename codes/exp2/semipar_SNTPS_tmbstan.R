@@ -26,8 +26,8 @@ options(scipen=999)
 
 #=================================================
 # Compilamos el modelo y lo cargamos en R
-TMB::compile('semipar_SNTPS_stan.cpp')
-dyn.load(dynlib("semipar_SNTPS_stan"))
+TMB::compile('semipar_SNTPS_tmbstan.cpp')
+dyn.load(dynlib("semipar_SNTPS_tmbstan"))
 # #=================================================
 
 
@@ -191,7 +191,7 @@ tmb_par = list(beta = c(0.1, 0.1),
 #             Run the model
 #=====================================
 # Skew normal
-obj <- MakeADFun(tmb_data, random = c("smoothCoefs"), tmb_par, DLL="semipar_SNTPS_stan", hessian = TRUE)
+obj <- MakeADFun(tmb_data, random = c("smoothCoefs"), tmb_par, DLL="semipar_SNTPS_tmbstan", hessian = TRUE)
 opt = nlminb(obj$par,obj$fn,obj$gr)
 rep = sdreport(obj)
 #-------------------------------------------
