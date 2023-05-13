@@ -22,8 +22,8 @@ options(scipen=999)
 
 #=================================================
 # Compilamos el modelo y lo cargamos en R
-TMB::compile('semipar_SNTPS_tmbstan.cpp')
-dyn.load(dynlib("semipar_SNTPS_tmbstan"))
+TMB::compile('semipar_cpue_SNTPS_tmbstan.cpp')
+dyn.load(dynlib("semipar_cpue_SNTPS_tmbstan"))
 # #=================================================
 # 
 
@@ -145,7 +145,7 @@ tmb_par = list(beta0 = 0.1,
 #=====================================
 #             SKEW NORMAL MODEL
 #=====================================
-obj <- MakeADFun(tmb_data, random = c("smoothCoefs"), tmb_par, DLL="semipar_SNTPS_tmbstan")
+obj <- MakeADFun(tmb_data, random = c("smoothCoefs"), tmb_par, DLL="semipar_cpue_SNTPS_tmbstan")
 
 
 # Lognormal
