@@ -1,3 +1,9 @@
-# Comparison between a TPS and GRF (spde) using Bayesian inference
+# Why not a thin plate spline for spatial models? A comparative study using Bayesian inference
 
-Bayesian spatial modelling using Template Model Builder (TMB) and Stan ---> $\texttt{tmbstan}$
+This repository contains the codes to reproduce the experiments in the articie.
+Folders:
+- sim: codes for the simulation experiments.
+- real: codes for the real application of the bayesian spatial models.
+
+  
+All the codes uses Template Model Builder (TMB) along with the library $\texttt{tmbstan}$.
