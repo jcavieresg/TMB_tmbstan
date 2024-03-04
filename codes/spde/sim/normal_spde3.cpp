@@ -33,6 +33,12 @@ Type dcauchy(Type x, Type mean, Type shape, int give_log=0){
   if(give_log) return logres; else return exp(logres);
 }
 
+template<class Type>
+Type ldhalfnorm(Type x, Type var){
+  return 0.5*log(2)-0.5*log(var*M_PI)+pow(x,2)/(2*var);
+}
+
+
 
 // helper function to make sparse SPDE precision matrix
 // Inputs:
@@ -56,11 +62,11 @@ Type dcauchy(Type x, Type mean, Type shape, int give_log=0){
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
-
-
-//=========================
-//      DATA SECTION
-//=========================
+  
+  
+  //=========================
+  //      DATA SECTION
+  //=========================
   //DATA_INTEGER(model); 	          // type of spatial model
   //DATA_INTEGER(normalization);    // scalling or not the GMRF (considering the param of Q)
   DATA_VECTOR(y);		              // Response
@@ -71,13 +77,13 @@ Type objective_function<Type>::operator() ()
   
   DATA_SPARSE_MATRIX(A);          // used to project from spatial mesh to data locations
   
-  DATA_SCALAR(tau0);
-  DATA_SCALAR(kappa0);
+  // DATA_SCALAR(tau0);
+  // DATA_SCALAR(kappa0);
   
-
-//=========================
-//   PARAMETER SECTION
-//=========================
+  
+  //=========================
+  //   PARAMETER SECTION
+  //=========================
   
   // Fixed effects
   //PARAMETER_VECTOR(beta);
@@ -96,58 +102,57 @@ Type objective_function<Type>::operator() ()
   Type tau = exp(logtau);
   Type kappa = exp(logkappa);
   
-
+  
   SparseMatrix<Type> Q = Q_spde(spde_mat, kappa);
   
-  //SparseMatrix<Type> Q = exp(4*logkappa)*M0 + Type(2.0)*exp(2*logkappa)*M1 + M2;
+
+  // ===================================
+  //               Priors
+  // ===================================
+  Type nlp = 0.0;
+  nlp -= dnorm(beta0,     Type(1.0),     Type(3.0), true);   //
+  nlp -= dnorm(beta1,     Type(1.0),     Type(3.0), true);   //
+  // 
+  // // Prior on sigma
+  nlp -= dcauchy(sigma_e,   Type(0.0), Type(5.0), true);
   
-  //SparseMatrix<Type> Q   = spde_Q(logkappa, logtau, M0, M1, M2);
   
-
-// ===================================
-//               Priors
-// ===================================
-   Type nlp = 0.0;                  
-   //nlp -= dnorm(beta,     Type(0.0),     Type(5.0), true).sum();   //
-   nlp -= dnorm(beta0,     Type(2.0),     Type(2.0), true);   //
-   nlp -= dnorm(beta1,     Type(1.0),     Type(2.0), true);   //
-
-// Prior on sigma
-   nlp -= dcauchy(sigma_e,   Type(0.0), Type(5.0), true);
-
-
-// Prior in Hyperparameters
-   nlp -= dnorm(tau,      tau0,     Type(1.0), true);   //
-   nlp -= dnorm(kappa,    kappa0,   Type(1.0), true);   //
-   
-
-
+  // Prior in Hyperparameters
+  nlp -= dnorm(tau,      Type(0.0),   Type(0.5), true);   //
+  nlp -= dnorm(kappa,    Type(0.0),   Type(0.5), true);   //
+  //nlp -= dlognorm(tau,      tau0,     Type(5.0), true);   //
+  //nlp -= dlognorm(kappa,    kappa0,   Type(5.0), true);   //
+  // nlp -= ldhalfnorm(tau,      Type(2.0));
+  // nlp -= ldhalfnorm(kappa,    Type(2.0));
+  
+  //nlp -= dlognorm(tau,      Type(0.0),   Type(1.0), true);   //
+  //nlp -= dlognorm(kappa,    Type(0.0),   Type(1.0), true);   //
+  
   //=============================================================================================================
   // Objective function is sum of negative log likelihood components
   int n = y.size();	                 // number of observations 
-  //vector<Type> projS(n);             // value of gmrf at data points
-  
-  Type nll = 0.0;	                       // likelihood for the observations
+
+  Type nll = 0.0;	                   // likelihood for the observations
   Type nll_u = 0.0;		               // likelihood for the spatial effect
   
   
   // Linear predictor
   vector<Type> mu(n);
   //projS = A * u;                     // Project S at mesh pts to data pts
-    // if(model==1)
-    //   mu  = beta0 + beta1*x1 + ((A*u) / tau);
-    // if(model==2) 
+  // if(model==1)
+  //   mu  = beta0 + beta1*x1 + ((A*u) / tau);
+  // if(model==2) 
   mu  = beta0 + beta1*x1 + A*u;
-    // if(model==3) 
-    //   mu  = beta0 + beta1*x1 + u(site);
-    
+  // if(model==3) 
+  //   mu  = beta0 + beta1*x1 + u(site);
+  
   //if(normalization==1)
   nll_u += GMRF(Q)(u); // returns negative already
   //if(normalization==2) 
   //nll_u += SCALE(GMRF(Q), 1/ tau)(u); // returns negative already
-      
-    
-// Probability of data conditional on fixed effect values
+  
+  
+  // Probability of data conditional on fixed effect values
   for(int i=0; i<n; i++){
     // And the contribution of the likelihood
     nll -= dnorm(y(i), mu(i), sigma_e, true);
@@ -168,14 +173,15 @@ Type objective_function<Type>::operator() ()
   Type rho = sqrt(8.0) / kappa;
   Type sigma_s = 1.0 / sqrt (4.0 * M_PI* 2.0*tau * 2.0 * kappa);
   
+  
   // Jacobian adjustment 
   nll -= logsigma_e + logtau + logkappa;
-
+  
   
   // Calculate joint negative log likelihood
   Type jnll = nll + nll_u + nlp;
   
-
+  
   //=====================================================================================================
   // Reporting
   REPORT(jnll);
@@ -184,9 +190,9 @@ Type objective_function<Type>::operator() ()
   REPORT(beta1);
   REPORT(u);
   REPORT(mu);
-  // REPORT(logsigma_e);
-  // REPORT(logtau);
-  // REPORT(logkappa);
+  REPORT(logsigma_e);
+  REPORT(logtau);
+  REPORT(logkappa);
   REPORT(sigma_e);
   REPORT(tau);
   REPORT(kappa);
@@ -198,12 +204,9 @@ Type objective_function<Type>::operator() ()
   //ADREPORT(beta)
   ADREPORT(beta0);
   ADREPORT(beta1);
-  // ADREPORT(logsigma_e);
-  // ADREPORT(logtau);
-  // ADREPORT(logkappa);
-  ADREPORT(sigma_e);
-  ADREPORT(tau);
-  ADREPORT(kappa);
+  ADREPORT(logsigma_e);
+  ADREPORT(logtau);
+  ADREPORT(logkappa);
   ADREPORT(rho);
   ADREPORT(sigma_s);
   
@@ -212,4 +215,3 @@ Type objective_function<Type>::operator() ()
   ADREPORT(sigma_s);		         
   return jnll;
 }
-

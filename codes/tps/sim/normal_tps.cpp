@@ -56,16 +56,18 @@ Type objective_function<Type>::operator() ()
   // Priors
   Type nlp = Type(0.0);                                 // negative log prior  (priors)
   
-  nlp-= dnorm(beta0,    Type(1.0), Type(5.0), true);
-  nlp-= dnorm(beta1,    Type(1.0), Type(5.0), true);
+  nlp-= dnorm(beta0,    Type(1.0), Type(3.0), true);
+  nlp-= dnorm(beta1,    Type(1.0), Type(3.0), true);
 
   // Variance component
   nlp-= dcauchy(sigma,   Type(0.0),   Type(5.0));
 
   // Penalty parameter
-  nlp-= dnorm(lambda, Type(0.0),   Type(1.0), true);
-
-  nlp-= dnorm(x, Type(0.0), Type(1.0), true).sum(); 
+  //nlp-= dnorm(lambda, Type(0.0),   Type(1.0), true);
+  nlp-= dexp(lambda, Type(1.0), true);
+  
+  
+  nlp-= dnorm(x, Type(0.0), Type(2.0), true).sum(); 
   
   
   // We create a vector of means
