@@ -21,9 +21,7 @@ set.seed(1234)
 #==================================================
 #                 SIMULATED DATA
 #==================================================
-
 run_tmb <- function(nloc){
-
 set.seed(1234)
 
 nloc = nloc
@@ -41,10 +39,9 @@ colnames(df) <- c("s1", "s2", "z", "x0")
 #====================================================
 #      Getting matrices from mgcv
 #====================================================
-#k = round(nloc*0.5)
 tp_setup = gam(z ~ x0 + s(s1, s2, bs = "tp", 
                           k = ifelse(round(length(df$s1)*0.1, digits = 0) < 30, 30, 
-                                     round(length(df$s1)*0.1, digits = 0))),
+                              round(length(df$s1)*0.1, digits = 0))),
                 data = df,
                 fit = FALSE)
 
@@ -56,7 +53,7 @@ log_lam = 0
 x = rmvn(n = 1, mu = rep(0, nrow(E)), V = exp(log_lam) * E) 
 
 knots_app <- tp_setup$smooth[[1]]$bs.dim
-knots_app
+
 #===========================================================================
 #                          Simulate data
 #===========================================================================
@@ -71,15 +68,6 @@ y_sim = mu_sim + rnorm(nrow(df), mean = 0, sd = sigma_ini)
 df$tps = Xtp %*% x
 df$y_sim = y_sim
 df$x1 <- x1
-
-# if (to_plot){
-#   ggplot(df) +
-#     geom_tile(aes(x = x, y = y, fill = Y)) +
-#     coord_equal() +
-#     scale_fill_viridis_c()
-# }
-
-
 
 #======================================
 #                TMB data
@@ -124,14 +112,9 @@ obj4[[2]]$par
 obj5[[2]]$par
 obj6[[2]]$par
 
-
-obj2[[7]]
-
 #===========================================================================================
 #                                        Fit with tmbstan
 #===========================================================================================
-
-
 M = list()
 M[[1]] = list()
 M[[1]]$model = "spatial_100"
@@ -145,7 +128,6 @@ M[[5]] = list()
 M[[5]]$model = "spatial_n500"
 M[[6]] = list()
 M[[6]]$model = "spatial_n600"
-
 
 
 M[[1]]$formula = obj1[[1]]
@@ -190,55 +172,6 @@ mon4 = monitor(m4)
 mon5 = monitor(m5)
 mon6 = monitor(m6)
 
-beta0 <- extract_variable_matrix(posterior_1, "beta0")
-ess_bulk(beta0)
-#> [1] 558.0173
-
-tps_df <- as_draws_df(posterior_1)
-# summarise_draws or summarize_draws
-summarise_draws(tps_df)
-
-summarise_draws(tps_df, "mean", "mcse_mean")
-
-
-library(bayesplot)
-library(posterior)
-library(rstantools)
-library(bennu)
-
-
-# mon1 = monitor(posterior_1)
-# mon2 = monitor(posterior_2)
-# mon3 = monitor(posterior_3)
-# mon4 = monitor(posterior_4)
-# mon5 = monitor(posterior_5)
-# mon6 = monitor(posterior_6)
-
-
-max(mon6$Rhat)
-min(mon6$Bulk_ESS)
-min(mon6$Tail_ESS)
-tps6_df <- as_draws_df(posterior_6)
-print(summarise_draws(tps6_df, "mean", "mcse_mean"), n = 100)
-
-params = rstan::extract(posterior_1, permuted=FALSE, inc_warmup=TRUE)
-
-plot(c(1,3), c(1,3), ty='n', xlab='beta0', ylab='beta0')
-lines(params[,'chain:1','beta0'], params[,'chain:1','beta0'], col='black',ty='o', pch=20)
-lines(params[,'chain:2','beta0'], params[,'chain:2','beta0'], col='orange',ty='o', pch=20)
-lines(params[,'chain:3','beta0'], params[,'chain:3','beta0'], col='red',ty='o', pch=20)
-#lines(params[,'chain:4','beta0'], params[,'chain:4','beta0'], col='gray',ty='o', pch=20)
-legend('topright', legend=c('chain1', 'chain2', 'chain3'), col=c('black', 'orange', 'red'), lty='solid', 
-       bty='n')
-
-
-plot(c(1.5, 2.5), c(0,2), ty='n', xlab='beta0', ylab='beta1')
-lines(params[,'chain:1','beta0'], params[,'chain:1','beta1'], col='black',ty='o', pch=20)
-lines(params[,'chain:2','beta0'], params[,'chain:2','beta1'], col='orange',ty='o', pch=20)
-lines(params[,'chain:3','beta0'], params[,'chain:3','beta1'], col='grey',ty='o', pch=20)
-legend('topright', legend=c('chain1', 'chain2', 'chain3'), col=c('black', 'orange', 'grey'), lty='solid', bty='n')
-
-
 sum1 <- data.frame(mon1$mean, mon1$`25%`, mon1$`75%`)
 colnames(sum1) <- c("mean", "25%", "75%")
 head(sum1)
@@ -263,17 +196,6 @@ sum6 <- data.frame(mon6$mean, mon6$`25%`, mon6$`75%`)
 colnames(sum6) <- c("mean", "25%", "75%")
 head(sum6)
 
-#pp_check(posterior_1, ndraws = 63)
-
-# ppc_loo_pit_overlay(yrep = yrep1, y = y, lw = weights(loo1$psis_object)) + ggtitle("LOO-PIT Model 1")
-
-#mcmc_dens_overlay(posterior_1, pars = c("beta0", "beta1", "logsigma"))
-# mcmc_dens_overlay(posterior_1, pars = c("beta0", "beta1", "logsigma"))
-# 
-# mcmc_areas(posterior_1, regex_pars = c("beta0", "beta1", "logsigma"),  prob = 0.8) +
-#   labs(title = "Posterior distributions", subtitle = "with medians and 80% intervals")
-
-
 # Simulating from the SIMULATE function
 mat_sim = matrix(data=NA, nrow=length(obj6[[1]]$simulate()$y_sim), ncol=100)
 mat_sim
@@ -284,8 +206,6 @@ for(j in 1:ncol(mat_sim)){
     mat_sim[, j] = obj6[[1]]$simulate()$y_sim
     }
 }
-mat_sim
-
 
 df1 <- data.frame(obj1[[4]]$y_sim, mat_sim)
 names(df1)[names(df1) == 'obj1..4...y_sim'] <- 'y_sim'
@@ -359,13 +279,13 @@ p2 <- ggplot(df2, aes(y_sim)) +
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("Grid 2") + 
+  # ggtitle("SP 2") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 2", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 2", colour = "blue", size = 10)
+  # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 2", colour = "black", size = 7)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 2", colour = "blue", size = 10)
 
   
-  # geom_label(aes(x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 2", 
+  # geom_label(aes(x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 2", 
   #                colour = "white", fontface = "bold"), fill = "black") 
 for (i in 2:ncol(df2)) {
   p2 <- p2 + stat_function(fun = dnorm, 
@@ -381,10 +301,10 @@ p3 <- ggplot(df3, aes(y_sim)) +
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("Grid 3") + 
+  # ggtitle("SP 3") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 3", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 3", colour = "blue", size = 10)
+  # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 3", colour = "black", size = 7)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 3", colour = "blue", size = 10)
 
 
 for (i in 2:ncol(df3)) {
@@ -401,10 +321,10 @@ p4 <- ggplot(df4, aes(y_sim)) +
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("Grid 4") + 
+  # ggtitle("SP 4") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 4", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 4", colour = "blue", size = 10)
+  #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 4", colour = "black", size = 7)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 4", colour = "blue", size = 10)
 
 for (i in 2:ncol(df4)) {
   p4 <- p4 + stat_function(fun = dnorm, 
@@ -419,10 +339,10 @@ p5 <- ggplot(df5, aes(y_sim)) +
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("Grid 5") + 
+  # ggtitle("SP 5") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
-   #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 5", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 5", colour = "blue", size = 10)
+   #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 5", colour = "black", size = 7)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 5", colour = "blue", size = 10)
 
 for (i in 2:ncol(df5)) {
   p5 <- p5 + stat_function(fun = dnorm, 
@@ -438,11 +358,11 @@ p6 <- ggplot(df6, aes(y_sim)) +
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("Grid 6") + 
+  # ggtitle("SP 6") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 6", colour = "black", size = 7)
-  #annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, label = "Grid 1", colour = "blue", size = 10)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 6", colour = "blue", size = 10)
+  #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 6", colour = "black", size = 7)
+  #annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, label = "SP 1", colour = "blue", size = 10)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 6", colour = "blue", size = 10)
 
   
 for (i in 2:ncol(df6)) {
@@ -458,10 +378,8 @@ for (i in 2:ncol(df6)) {
 #                      heights = unit(c(1.5, 1), c('cm', 'npc')),
 #                      as.table = FALSE)
 # 
-# grid.arrange(p1, p2, p3, p4, ncol = 2, top = title)
+# SP.arrange(p1, p2, p3, p4, ncol = 2, top = title)
 
-library(grid)
-library(gridExtra)
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3,
              top = textGrob("M-TPS", gp=gpar(fontsize=28,font=1)))
 
