@@ -67,26 +67,19 @@ Type objective_function<Type>::operator() ()
   //=========================
   //      DATA SECTION
   //=========================
-  //DATA_INTEGER(model); 	          // type of spatial model
-  //DATA_INTEGER(normalization);    // scalling or not the GMRF (considering the param of Q)
   DATA_VECTOR(y);		              // Response
-  //DATA_MATRIX(X);                 // Fixed effects
   DATA_VECTOR(x1);                 // Fixed effects
-  DATA_FACTOR(site);		          // Random effect index for observation i
+  //DATA_FACTOR(site);		          // Random effect index for observation i
   DATA_STRUCT(spde_mat, spde_t);  // Three matrices needed for representing the GMRF, see p. 8 in Lindgren et al. (2011)
   
   DATA_SPARSE_MATRIX(A);          // used to project from spatial mesh to data locations
   
-  // DATA_SCALAR(tau0);
-  // DATA_SCALAR(kappa0);
-  
-  
+
   //=========================
   //   PARAMETER SECTION
   //=========================
   
   // Fixed effects
-  //PARAMETER_VECTOR(beta);
   PARAMETER(beta0);
   PARAMETER(beta1);
   
@@ -110,24 +103,17 @@ Type objective_function<Type>::operator() ()
   //               Priors
   // ===================================
   Type nlp = 0.0;
-  nlp -= dnorm(beta0,     Type(1.0),     Type(3.0), true);   //
-  nlp -= dnorm(beta1,     Type(1.0),     Type(3.0), true);   //
+  nlp -= dnorm(beta0,     Type(1.0),     Type(2.0), true);   //
+  nlp -= dnorm(beta1,     Type(1.0),     Type(2.0), true);   //
   // 
   // // Prior on sigma
   nlp -= dcauchy(sigma_e,   Type(0.0), Type(5.0), true);
   
   
   // Prior in Hyperparameters
-  nlp -= dnorm(tau,      Type(0.0),   Type(0.5), true);   //
-  nlp -= dnorm(kappa,    Type(0.0),   Type(0.5), true);   //
-  //nlp -= dlognorm(tau,      tau0,     Type(5.0), true);   //
-  //nlp -= dlognorm(kappa,    kappa0,   Type(5.0), true);   //
-  // nlp -= ldhalfnorm(tau,      Type(2.0));
-  // nlp -= ldhalfnorm(kappa,    Type(2.0));
-  
-  //nlp -= dlognorm(tau,      Type(0.0),   Type(1.0), true);   //
-  //nlp -= dlognorm(kappa,    Type(0.0),   Type(1.0), true);   //
-  
+  nlp -= dnorm(tau,      Type(0.0),   Type(1.0), true);   //
+  nlp -= dnorm(kappa,    Type(0.0),   Type(1.0), true);   //
+
   //=============================================================================================================
   // Objective function is sum of negative log likelihood components
   int n = y.size();	                 // number of observations 
@@ -138,18 +124,11 @@ Type objective_function<Type>::operator() ()
   
   // Linear predictor
   vector<Type> mu(n);
-  //projS = A * u;                     // Project S at mesh pts to data pts
-  // if(model==1)
-  //   mu  = beta0 + beta1*x1 + ((A*u) / tau);
-  // if(model==2) 
   mu  = beta0 + beta1*x1 + A*u;
-  // if(model==3) 
-  //   mu  = beta0 + beta1*x1 + u(site);
-  
+
   //if(normalization==1)
-  nll_u += GMRF(Q)(u); // returns negative already
-  //if(normalization==2) 
-  //nll_u += SCALE(GMRF(Q), 1/ tau)(u); // returns negative already
+  //nll_u += GMRF(Q)(u); // returns negative already
+  nll_u += SCALE(GMRF(Q), 1/ tau)(u); // returns negative already
   
   
   // Probability of data conditional on fixed effect values
@@ -197,7 +176,7 @@ Type objective_function<Type>::operator() ()
   REPORT(tau);
   REPORT(kappa);
   REPORT(rho);		         
-  REPORT(sigma_s);		         
+		         
   
   //=======================================================================================================
   // AD report (standard devations)
@@ -210,8 +189,5 @@ Type objective_function<Type>::operator() ()
   ADREPORT(rho);
   ADREPORT(sigma_s);
   
-  // Derived geospatial components
-  ADREPORT(rho);		               // geostatistical range
-  ADREPORT(sigma_s);		         
   return jnll;
 }

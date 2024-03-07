@@ -1,9 +1,9 @@
 rm(list = ls())
-setwd("C:/Users/Usuario/Desktop/tps_vs_spde/tps_rspde")
+setwd("C:/Users/cavieresgaet/Desktop/tps_spde/new_codes/tps")
 
 library(pacman)
 pacman::p_load(geoR, fields, prodlim, TMB, TMBhelper, mgcv, dplyr, tmbstan, parallel, MASS, Matrix,
-               raster, ggplot2, gridExtra, bayesplot, grid, posterior)
+               raster, ggplot2, gridExtra, bayesplot, grid)
 
 options(scipen=999)
 # Calculate the number of cores
@@ -23,15 +23,16 @@ set.seed(1234)
 #==================================================
 
 run_tmb <- function(nloc){
+
 set.seed(1234)
-  
+
 nloc = nloc
-  
 x <- runif(nloc, 0, 10)
 y <- runif(nloc, 0, 10)
   
 coords = cbind(x, y)
 df <- data.frame(coords)
+
 df$z = 0
 df$x0 = 0
 
@@ -40,9 +41,10 @@ colnames(df) <- c("s1", "s2", "z", "x0")
 #====================================================
 #      Getting matrices from mgcv
 #====================================================
-
-k = round(nloc*0.5)
-tp_setup = gam(z ~ x0 + s(s1, s2, bs = "tp", k = k),
+#k = round(nloc*0.5)
+tp_setup = gam(z ~ x0 + s(s1, s2, bs = "tp", 
+                          k = ifelse(round(length(df$s1)*0.1, digits = 0) < 30, 30, 
+                                     round(length(df$s1)*0.1, digits = 0))),
                 data = df,
                 fit = FALSE)
 
@@ -55,22 +57,29 @@ x = rmvn(n = 1, mu = rep(0, nrow(E)), V = exp(log_lam) * E)
 
 knots_app <- tp_setup$smooth[[1]]$bs.dim
 knots_app
-
 #===========================================================================
 #                          Simulate data
 #===========================================================================
 beta0 = 1.0
 beta1 = 2.0
-sigma_ini = 0.3
+sigma_ini = 0.1
 x1 = runif(df$x, 0, 1)
 
 mu_sim = beta0 + beta1*x1 + Xtp %*% x
 y_sim = mu_sim + rnorm(nrow(df), mean = 0, sd = sigma_ini)
 
-
 df$tps = Xtp %*% x
 df$y_sim = y_sim
 df$x1 <- x1
+
+# if (to_plot){
+#   ggplot(df) +
+#     geom_tile(aes(x = x, y = y, fill = Y)) +
+#     coord_equal() +
+#     scale_fill_viridis_c()
+# }
+
+
 
 #======================================
 #                TMB data
@@ -101,13 +110,22 @@ return(res_list)
 #=====================================
 #             Run the TMB models
 #=====================================
-obj1 <- run_tmb(50)
-obj2 <- run_tmb(100)
-obj3 <- run_tmb(150)
-obj4 <- run_tmb(200)
-obj5 <- run_tmb(250)
-obj6 <- run_tmb(300)
+obj1 <- run_tmb(100)
+obj2 <- run_tmb(200)
+obj3 <- run_tmb(300)
+obj4 <- run_tmb(400)
+obj5 <- run_tmb(500)
+obj6 <- run_tmb(600)
 
+obj1[[2]]$par
+obj2[[2]]$par
+obj3[[2]]$par
+obj4[[2]]$par
+obj5[[2]]$par
+obj6[[2]]$par
+
+
+obj2[[7]]
 
 #===========================================================================================
 #                                        Fit with tmbstan
@@ -116,11 +134,11 @@ obj6 <- run_tmb(300)
 
 M = list()
 M[[1]] = list()
-M[[1]]$model = "spatial_n50"
+M[[1]]$model = "spatial_100"
 M[[2]] = list()
-M[[2]]$model = "spatial_n100"
+M[[2]]$model = "spatial_n200"
 M[[3]] = list()
-M[[3]]$model = "spatial_n150"
+M[[3]]$model = "spatial_n300"
 M[[4]] = list()
 M[[4]]$model = "spatial_n400"
 M[[5]] = list()
@@ -146,13 +164,15 @@ for (i in 1:length(M)){
   fit <- tmbstan(M[[i]]$formula,
                  chains= 3, open_progress = FALSE,
                  control = list(max_treedepth= 13,  adapt_delta = 0.95),
-                 iter = 4000, warmup= 700, cores=no_cores,
+                 iter = 4500, warmup= 700, cores=no_cores,
                  init = 'last.par.best', seed = 12345)
   endTime <- Sys.time()
   timeUsed = difftime(endTime, startTime, units='mins')
   print(timeUsed)
   saveRDS(fit, file=paste0('stan_tps_', i,'.RDS'))
 }
+
+warnings()
 
 #posteriors  = readRDS("C:/Users/Usuario/Desktop/tps_vs_spde/example/posteriors_tmbstan.RDS")
 
@@ -163,8 +183,6 @@ m4 <- readRDS('stan_tps_4.RDS')
 m5 <- readRDS('stan_tps_5.RDS')
 m6 <- readRDS('stan_tps_6.RDS')
 
-
-
 mon1 = monitor(m1)
 mon2 = monitor(m2)
 mon3 = monitor(m3)
@@ -172,29 +190,53 @@ mon4 = monitor(m4)
 mon5 = monitor(m5)
 mon6 = monitor(m6)
 
+beta0 <- extract_variable_matrix(posterior_1, "beta0")
+ess_bulk(beta0)
+#> [1] 558.0173
+
+tps_df <- as_draws_df(posterior_1)
+# summarise_draws or summarize_draws
+summarise_draws(tps_df)
+
+summarise_draws(tps_df, "mean", "mcse_mean")
+
+
+library(bayesplot)
+library(posterior)
+library(rstantools)
+library(bennu)
+
+
+# mon1 = monitor(posterior_1)
+# mon2 = monitor(posterior_2)
+# mon3 = monitor(posterior_3)
+# mon4 = monitor(posterior_4)
+# mon5 = monitor(posterior_5)
+# mon6 = monitor(posterior_6)
+
 
 max(mon6$Rhat)
 min(mon6$Bulk_ESS)
 min(mon6$Tail_ESS)
-tps6_df <- as_draws_df(m6)
+tps6_df <- as_draws_df(posterior_6)
 print(summarise_draws(tps6_df, "mean", "mcse_mean"), n = 100)
 
-params = rstan::extract(m6, permuted=FALSE, inc_warmup=TRUE)
+params = rstan::extract(posterior_1, permuted=FALSE, inc_warmup=TRUE)
 
-#plot(c(1,3), c(1,3), ty='n', xlab='beta0', ylab='beta0')
-#lines(params[,'chain:1','beta0'], params[,'chain:1','beta0'], col='black',ty='o', pch=20)
-#lines(params[,'chain:2','beta0'], params[,'chain:2','beta0'], col='orange',ty='o', pch=20)
-#lines(params[,'chain:3','beta0'], params[,'chain:3','beta0'], col='red',ty='o', pch=20)
+plot(c(1,3), c(1,3), ty='n', xlab='beta0', ylab='beta0')
+lines(params[,'chain:1','beta0'], params[,'chain:1','beta0'], col='black',ty='o', pch=20)
+lines(params[,'chain:2','beta0'], params[,'chain:2','beta0'], col='orange',ty='o', pch=20)
+lines(params[,'chain:3','beta0'], params[,'chain:3','beta0'], col='red',ty='o', pch=20)
 #lines(params[,'chain:4','beta0'], params[,'chain:4','beta0'], col='gray',ty='o', pch=20)
-#legend('topright', legend=c('chain1', 'chain2', 'chain3'), col=c('black', 'orange', 'red'), lty='solid', 
-#       bty='n')
+legend('topright', legend=c('chain1', 'chain2', 'chain3'), col=c('black', 'orange', 'red'), lty='solid', 
+       bty='n')
 
 
-#plot(c(1.5, 2.5), c(0,2), ty='n', xlab='beta0', ylab='beta1')
-#lines(params[,'chain:1','beta0'], params[,'chain:1','beta1'], col='black',ty='o', pch=20)
-#lines(params[,'chain:2','beta0'], params[,'chain:2','beta1'], col='orange',ty='o', pch=20)
-#lines(params[,'chain:3','beta0'], params[,'chain:3','beta1'], col='grey',ty='o', pch=20)
-#legend('topright', legend=c('chain1', 'chain2', 'chain3'), col=c('black', 'orange', 'grey'), lty='solid', bty='n')
+plot(c(1.5, 2.5), c(0,2), ty='n', xlab='beta0', ylab='beta1')
+lines(params[,'chain:1','beta0'], params[,'chain:1','beta1'], col='black',ty='o', pch=20)
+lines(params[,'chain:2','beta0'], params[,'chain:2','beta1'], col='orange',ty='o', pch=20)
+lines(params[,'chain:3','beta0'], params[,'chain:3','beta1'], col='grey',ty='o', pch=20)
+legend('topright', legend=c('chain1', 'chain2', 'chain3'), col=c('black', 'orange', 'grey'), lty='solid', bty='n')
 
 
 sum1 <- data.frame(mon1$mean, mon1$`25%`, mon1$`75%`)
@@ -220,6 +262,16 @@ head(sum5)
 sum6 <- data.frame(mon6$mean, mon6$`25%`, mon6$`75%`)
 colnames(sum6) <- c("mean", "25%", "75%")
 head(sum6)
+
+#pp_check(posterior_1, ndraws = 63)
+
+# ppc_loo_pit_overlay(yrep = yrep1, y = y, lw = weights(loo1$psis_object)) + ggtitle("LOO-PIT Model 1")
+
+#mcmc_dens_overlay(posterior_1, pars = c("beta0", "beta1", "logsigma"))
+# mcmc_dens_overlay(posterior_1, pars = c("beta0", "beta1", "logsigma"))
+# 
+# mcmc_areas(posterior_1, regex_pars = c("beta0", "beta1", "logsigma"),  prob = 0.8) +
+#   labs(title = "Posterior distributions", subtitle = "with medians and 80% intervals")
 
 
 # Simulating from the SIMULATE function
@@ -255,6 +307,26 @@ names(df6)[names(df6) == 'obj6..4...y_sim'] <- 'y_sim'
 
 
 
+mean(obj1[[4]]$y_sim)
+mean(obj2[[4]]$y_sim)
+mean(obj3[[4]]$y_sim)
+mean(obj4[[4]]$y_sim)
+mean(obj5[[4]]$y_sim)
+mean(obj6[[4]]$y_sim)
+
+mean(colMeans(df1[, c(-1)]))
+mean(colMeans(df2[, c(-1)]))
+mean(colMeans(df3[, c(-1)]))
+mean(colMeans(df4[, c(-1)]))
+mean(colMeans(df5[, c(-1)]))
+mean(colMeans(df6[, c(-1)]))
+
+mean(sapply(df1[, c(-1)], sd))
+mean(sapply(df2[, c(-1)], sd))
+mean(sapply(df3[, c(-1)], sd))
+mean(sapply(df4[, c(-1)], sd))
+mean(sapply(df5[, c(-1)], sd))
+mean(sapply(df6[, c(-1)], sd))
 
 
 
@@ -269,7 +341,7 @@ p1 <- ggplot(df1, aes(y_sim)) +
   # ggtitle("Grid 1") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
   #annotate("text", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 1", colour = "black", size = 10)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 1", colour = "blue", size = 10)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 1", colour = "blue", size = 10)
 
 for (i in 2:ncol(df1)) {
   p1 <- p1 + stat_function(fun = dnorm, 
@@ -290,7 +362,7 @@ p2 <- ggplot(df2, aes(y_sim)) +
   # ggtitle("Grid 2") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
   # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 2", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 2", colour = "blue", size = 10)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 2", colour = "blue", size = 10)
 
   
   # geom_label(aes(x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 2", 
@@ -312,7 +384,7 @@ p3 <- ggplot(df3, aes(y_sim)) +
   # ggtitle("Grid 3") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
   # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 3", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 3", colour = "blue", size = 10)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 3", colour = "blue", size = 10)
 
 
 for (i in 2:ncol(df3)) {
@@ -332,7 +404,7 @@ p4 <- ggplot(df4, aes(y_sim)) +
   # ggtitle("Grid 4") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
   #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 4", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 4", colour = "blue", size = 10)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 4", colour = "blue", size = 10)
 
 for (i in 2:ncol(df4)) {
   p4 <- p4 + stat_function(fun = dnorm, 
@@ -350,7 +422,7 @@ p5 <- ggplot(df5, aes(y_sim)) +
   # ggtitle("Grid 5") + 
   # theme(plot.title = element_text(size = 22, hjust = 0.5))
    #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 5", colour = "black", size = 7)
-  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP 5", colour = "blue", size = 10)
+  annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "Grid 5", colour = "blue", size = 10)
 
 for (i in 2:ncol(df5)) {
   p5 <- p5 + stat_function(fun = dnorm, 
@@ -394,29 +466,6 @@ grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3,
              top = textGrob("M-TPS", gp=gpar(fontsize=28,font=1)))
 
 
-# Means of the simulated data
-mean(colMeans(df1[, c(-1)]))
-mean(colMeans(df2[, c(-1)]))
-mean(colMeans(df3[, c(-1)]))
-mean(colMeans(df4[, c(-1)]))
-mean(colMeans(df5[, c(-1)]))
-mean(colMeans(df6[, c(-1)]))
-
-# Posterior means
-mean(obj1[[4]]$y_sim)
-mean(obj2[[4]]$y_sim)
-mean(obj3[[4]]$y_sim)
-mean(obj4[[4]]$y_sim)
-mean(obj5[[4]]$y_sim)
-mean(obj6[[4]]$y_sim)
-
-# Posterior sd
-mean(sapply(df1[, c(-1)], sd))
-mean(sapply(df2[, c(-1)], sd))
-mean(sapply(df3[, c(-1)], sd))
-mean(sapply(df4[, c(-1)], sd))
-mean(sapply(df5[, c(-1)], sd))
-mean(sapply(df6[, c(-1)], sd))
 
 
 # grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3,
@@ -452,5 +501,134 @@ for (i in 2:ncol(df_plot1)-1) {
 
 # ptot1 + ggtitle("M-TPS") + 
 #   theme(plot.title = element_text(color="black", size=22, hjust=0.5)) + facet_wrap(~Grid)
+
+
+
+
+
+
+
+
+
+
+
+
+# plot prediction
+to_plot = TRUE   # generate plots
+
+xhat = summary(obj4[[3]], "random")[,1] 
+par_fixed = summary(obj4[[3]], "fixed")
+betahat = summary(obj4[[3]], "fixed")["beta0", 1]
+obj4[[4]]$tps_est = obj4[[5]]$X %*% xhat
+
+
+  scl_lims = range(c(obj4[[4]]$tps, obj4[[4]]$tps_est))
+  # truth
+  g_true =  ggplot(obj4[[4]]) +
+    geom_tile(aes(x = s1, y = s2, fill = tps)) +
+    coord_equal() +
+    scale_fill_viridis_c(limits = scl_lims) + 
+    theme(axis.title.x = element_text(size = 18),
+          axis.title.y = element_text(size = 18),
+          legend.title = element_text(size=22),
+          legend.text = element_text(size=14),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14))
+
+  # estimate
+  g_est =  ggplot(obj4[[4]]) +
+    geom_tile(aes(x = s1, y = s2, fill = tps_est)) +
+    coord_equal() +
+    scale_fill_viridis_c(limits = scl_lims) +
+    theme(axis.title.x = element_text(size = 18),
+          axis.title.y = element_blank(),
+          legend.title = element_text(size=22),
+          legend.text = element_text(size=14),
+          axis.text.x = element_text(size = 12),
+          axis.text.y = element_text(size = 12))
+
+grid.arrange(g_true, g_est, ncol = 2)
+
+
+library(loo)
+
+#obj_tps  = readRDS("C:/Users/Usuario/Desktop/semipar_TPS/tmbstan_real_model/fit_tps_TMB.RDS")
+# obj_TMB  = readRDS("C:/Users/Usuario/Desktop/Spatial/fits_TMB.RDS")
+# obj_spde = obj_TMB[[4]]
+
+posterior_tps  = readRDS("C:/Users/Usuario/Desktop/semipar_TPS/tmbstan_real_model/posterior_tps_tmbstan.RDS")
+posteriors  = readRDS("C:/Users/Usuario/Desktop/Spatial/posteriors_tmbstan.RDS")
+posterior_spde = posteriors[[4]]
+
+
+
+
+color_scheme_set("gray")
+p <- mcmc_areas(posterior_1, pars = c("beta0", "beta1"), rhat = c(1, 1))
+p + legend_move("bottom") 
+p + theme(legend.title = element_text(size=16),
+              legend.text = element_text(size=12),
+              axis.text.x = element_text(size = 14),
+              axis.text.y = element_text(size = 14))
+
+
+ppc_hist(as.vector(obj1[[5]]$y), as.vector(mat_sim[1:100, ]))
+
+library("shinystan")
+launch_shinystan(posterior_1)
+
+
+
+
+
+
+
+
+
+## Step 1: read in and prep the data, and compile and link model
+library(TMB)
+library(INLA)
+library(fields)
+
+
+rep  = obj1[[3]]
+
+rangeIndex = which(row.names(summary(rep,"report"))=="Range")
+fieldIndex = which(row.names(summary(rep,"report"))=="omega_s")
+range = summary(rep,"report")[rangeIndex,]
+
+proj = inla.mesh.projector(mesh)
+latentFieldMAP = rep$par.random[names(rep$par.random)=="omega_s"]/exp(rep$par.fixed[which(names(rep$par.fixed)=="logtauO")])
+x11()
+par(mfrow=c(3,2), mar = c(5, 4, 2.5, 0.5), oma = c(0.5, 0.5, 0.2, 0.2))
+image.plot(proj$x,proj$y, inla.mesh.project(proj, latentFieldMAP),col =  colorRampPalette(c("white","gold", "firebrick1"))(12),
+           xlab = '', ylab = 'Latitude',
+           main = "Mean of the spatial random effect",
+           cex.lab = 1.6,cex.axis = 1.3, cex.main=1.4, 
+           cex.sub= 1.1,
+           axis.args=list(cex.axis=1.3),
+           zlim = range(-9, 9))
+bnd <- inla.mesh.boundary(mesh)
+inter <- inla.mesh.interior(mesh)
+plot(mesh, draw.segments=FALSE, main = '', add = T, col = "black")
+points(coords,type = 'p',lwd = 2, pch = 19, cex = 1.2)
+legend(-74.01, -41.956, legend=c("Spatial Gamma model"),
+       col=c("NA"), cex=1.4, box.lty=1)
+#contour(proj$x, proj$y,inla.mesh.project(proj, latentFieldMAP) ,add = T,labcex  = 1,cex = 1)
+text(x = -73.9, y = -41.795, expression(bold("S"[5])), cex = 1.8, font=4, col = "black")
+text(x = -73.85, y = -41.725, expression(bold("S"[9])), cex = 1.8)
+text(x = -73.79, y = -41.82,  expression(bold("S"[3])), cex = 1.8,  col = "black", font =  2)
+text(x = -73.76, y = -41.71, expression(bold("S"[7])), cex = 1.8)
+text(x = -73.72, y = -41.835, expression(bold("S"[1])), cex = 1.8, col = "black", font = 2)
+text(x = -73.70, y = -41.74, expression(bold("S"[8])), cex = 1.8,  col = "black", font = 2)
+text(x = -73.66, y = -41.815, expression(bold("S"[2])), cex = 1.8)
+text(x = -73.64, y = -41.76, expression(bold("S"[6])), cex = 1.8, col = "black", font  = 2)
+
+text(x = -73.5, y = -41.86, expression(bold("S"[10])), cex = 1.8)
+
+text(x = -72.98, y = -41.64, expression(bold("S"[13])), cex = 1.8)
+text(x = -72.98, y = -41.74, expression(bold("S"[4])), cex = 1.8)
+text(x = -73, y = -41.82, expression(bold("S"[12])), cex = 1.8)
+text(x = -73.1, y = -41.93, expression(bold("S"[11])), cex = 1.8)
 
 

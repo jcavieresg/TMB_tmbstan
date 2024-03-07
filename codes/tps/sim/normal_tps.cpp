@@ -63,11 +63,11 @@ Type objective_function<Type>::operator() ()
   nlp-= dcauchy(sigma,   Type(0.0),   Type(5.0));
 
   // Penalty parameter
-  //nlp-= dnorm(lambda, Type(0.0),   Type(1.0), true);
-  nlp-= dexp(lambda, Type(1.0), true);
+  nlp-= dnorm(lambda, Type(0.0),   Type(1.0), true);
+  //nlp-= dexp(lambda, Type(1.0), true);
   
   
-  nlp-= dnorm(x, Type(0.0), Type(2.0), true).sum(); 
+  nlp-= dnorm(x, Type(0.0), Type(1.0), true).sum(); 
   
   
   // We create a vector of means
