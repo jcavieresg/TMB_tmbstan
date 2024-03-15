@@ -15,25 +15,16 @@ compile("sn_spde.cpp")
 dyn.load(dynlib("sn_spde"))
 
 
-
-
-
-
 #=============================================================================
 #                              Applied analysis
 #=============================================================================
 data = read.csv("north2.csv", header = T)
 head(data, 3)
 
-# data <- data[sample(nrow(data), 500), ]
-# dim(data)
-
-
 loc <- cbind(data$longitude, data$latitude)
 class(loc)
 dim(loc)
 
-#Define mesh and components representing the  precision matrix----
 bound1 <- inla.nonconvex.hull(loc)
 mesh = inla.mesh.create(loc, plot.delay=NULL, refine=TRUE, boundary = bound1)
 
@@ -41,8 +32,6 @@ plot(mesh)
 points(loc, col = "red", pch = 19)
 A = inla.spde.make.A(mesh,loc)
 spde = inla.spde2.matern(mesh, alpha=2)
-#spde = inla.spde2.pcmatern(mesh, alpha = 2, prior.range = c(5, 0.5), prior.sigma = c(5, 0.5))
-
 spde_mat = spde$param.inla[c("M0","M1","M2")]
 
 
@@ -57,7 +46,7 @@ data$destine <- as.factor(data$destine)
 #======================================
 #                TMB data
 #======================================
-tmb_data = list(likelihood = 3,
+tmb_data = list(likelihood = 3,                                 # Skew normal likelihood
                 model = 2, 
                 cpue     = sqrt(as.vector(data$cpue)),          # Response
                 year = as.numeric(data$year) - 1,
@@ -88,9 +77,10 @@ tmb_par  <- list(beta0 = 0.1,
 
 #dyn.unload(dynlib("spatial"))
 
-## Create the TMB object
+#=====================================
+#             SKEW NORMAL MODEL
+#=====================================
 obj <- MakeADFun(data = tmb_data, parameters = tmb_par, random="u", DLL="sn_spde", hessian = T)
-
 
 startTime <- Sys.time()
 opt <- nlminb(obj$par,obj$fn,obj$gr)
@@ -125,12 +115,6 @@ print(timeUsed)
 # Time difference of 3.965339 hours  !!!!!
 #================================================
 
-
-
-
-
-setwd("C:/Users/cavieresgaet/Desktop/stan_tmb/new_models/output_real_application")
-
 posterior_sn_spde <- as.matrix(stan_sn_spde)
 
 saveRDS(posterior_sn_spde, file='posterior_sn_spde.RDS')
@@ -155,30 +139,5 @@ traceplot(stan_sn_spde, pars=names(obj$par), inc_warmup=TRUE) +
 require(MCMCvis)
 MCMCsummary(stan_sn_spde, round = 2)
 pairs(fit_spde, pars = c("logsigma", "logtau", "logkappa")) # below the diagonal
-
-
-
-
-# Simulating from the SIMULATE function
-mat_sim = matrix(data=NA, nrow=length(obj$simulate()$y_sim), ncol=100)
-mat_sim
-
-
-for(j in 1:ncol(mat_sim)){
-  for(i in 1:nrow(mat_sim)){
-    mat_sim[, j] = obj$simulate()$y_sim
-  }
-}
-mat_sim
-
-# Plot lognormal non spatial simulations
-hist(y, col = "gray90", prob = TRUE, main = "100 simulated samples", cex.main = 2, xlab = "", col.lab = 'blue', col.main="blue", cex.lab = 1.4, cex.axis = 1.2, ylim = c(0, 0.3))
-for (j in 1: ncol(mat_sim)){
-  lines(x = density(x = mat_sim[, j]),  lty="dotted", col="azure4", lwd=1)
-}
-#legend("topright", "A", bty = "n", text.col="blue", cex = 1.4)
-legend(6, 0.3, c("response", "simulations"), lwd=4, col=c("gray90", "azure4"), cex = 1.5)
-
-
 
 

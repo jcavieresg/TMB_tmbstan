@@ -2,7 +2,7 @@ rm(list = ls())
 setwd("C:/Users/cavieresgaet/Desktop/stan_tmb/new_models/output_real_application/gamma_tps")
 
 library(pacman)
-pacman::p_load(geoR, fields, prodlim, TMB, INLA, dplyr, tmbstan, rstan, parallel, mgcv, ggplot2, bayesplot)
+pacman::p_load(geoR, fields, prodlim, TMB, INLA, dplyr, tmbstan, rstan, parallel, mgcv, ggplot2, bayesplot, TMBhelper)
 
 options(scipen=999)
 
@@ -36,10 +36,6 @@ z <- rep(0, length(data$cpue))
 data$z <- z
 head(data)
 
-
-# data <- sample_n(data, 1000)
-# dim(data)
-
 #===================
 #     mgcv setup
 #===================
@@ -48,7 +44,6 @@ m0 <- gam(z ~ year + trim + destine + depth  + s(latitude, longitude, bs = "tp",
 
 
 Xtps <- m0$X[, c(-1, -2, -3, -4, -5)]        # Matricial form without intercept and the parameters asociated with the covariates
-#Xtps <- m0$X[, c(-1, -2. -3)]               # Matricial form without intercept and the parameters asociated with the covariates
 Stps <- m0$smooth[[1]]$S[[1]]                # Extrtact penelization matrices
 dim(Stps)
 
@@ -80,15 +75,13 @@ data$destine <- as.factor(data$destine)
 #                TMB data
 #======================================
 tmb_data = list(likelihood = 2, # 1 = lognormal, 2 = Gamma, 3 = Slew normal
-                #cpue     = sqrt(as.vector(data$cpue)),   # Skew normal response
                 cpue     = as.vector(data$cpue),          # Gamma response
                 year = as.numeric(data$year) - 1,
                 trim = as.numeric(data$trim) - 1,
                 destine = as.numeric(data$destine) - 1,
                 depth = as.numeric(data$depth),
-                #X    = model.matrix(~1 + data$depth + as.numeric(data$year) - 1),
-                TPS     = Xtps,                                   # Design matrix, without intercept and betas
-                S     = as(S_combined, "dgTMatrix"),                          # Combined penalty matrix
+                TPS     = Xtps,                               # Design matrix, without intercept and betas
+                S     = as(S_combined, "dgTMatrix"),          # Combined penalty matrix
                 Sdims = Sdims,
                 tpsReport = .bdiag(tpsReport))
 
@@ -104,21 +97,12 @@ tmb_par = list(beta0 = 0.1,
                beta_depth = 0.1,
                smoothCoefs = rep(rnorm(ncol(Xtps), 0, 1)),              # Spline coefficients
                loglambda = exp(0.1),
-               #logalpha = rep(rep(0.1,length(Sdims))),       # Log spline penalization coefficients
-               logsigma = exp(0.1)
-               #logomega = exp(0.1)
-               )
+               logsigma = exp(0.1))
                
 
-
-
-
 #=====================================
-#             SKEW NORMAL MODEL
+#             GAMMA MODEL
 #=====================================
-# map = list(logomega = factor(NA))
-# obj <- MakeADFun(tmb_data, random = c("smoothCoefs"), tmb_par, DLL="semipar_GAMMATPS_tmbstan", map = map)
-
 obj <- MakeADFun(tmb_data, random = c("smoothCoefs"), tmb_par, DLL="gamma_tps")
 
 
@@ -132,13 +116,8 @@ print(timeUsed)
 
 obj$report()$log_lik
 
-opt$par
-
-exp(opt$par["loglambda"])
-
 #-------------------------------------------
 
-library(TMBhelper)
 TMBAIC(opt)
 TMBAIC(opt2)
 TMBAIC(opt3)
@@ -166,19 +145,10 @@ print(timeUsed)
 ##==========================================================
 ##        Time difference of 6.750947 hours !!!!!!
 ##==========================================================
-
-exp(opt$par["loglambda"])
-
-
 s <- summary(fit_tps_gamma, probs = c(0.25, 0.75))
 s$summary  # all chaines merged
 
-
-
-setwd("C:/Users/cavieresgaet/Desktop/stan_tmb/new_models/output_real_application/gamma_tps")
-
 posterior_tps_gamma <- as.matrix(fit_tps_gamma)
-
 saveRDS(posterior_tps_gamma, file='posterior_tps_gamma.RDS')
 saveRDS(fit_tps_gamma, file='fit_tps_gamma.RDS')
 
@@ -189,10 +159,7 @@ c_mid_highlight <- c("#A25050")
 c_dark <- c("#8F2727")
 c_dark_highlight <- c("#7C0000")
 
-
-traceplot(fit_tps_gamma, pars=names(obj$par), inc_warmup=TRUE)
-
-#load package
+#load packages
 require(MCMCvis)
 MCMCsummary(fit_tps, round = 2)
 
@@ -256,9 +223,6 @@ get_stancode(fit_tps)
 get_stanmodel(fit_tps)
 log_prob(fit_tps)
 loo(fit)
-traceplot(fit)
-
-#launch_shinystan(fit)
 
 ## ESS and Rhat from rstan::monitor
 mon = monitor(fit_tps)
@@ -269,59 +233,3 @@ min(mon$Tail_ESS)
 sum(mon$Rhat > 1.01)
 sum(mon$Tail_ESS < 400)
 
-source('monitornew.R')
-source('monitorplot.R')
-source('stan_utility.R')
-
-
-which_min_ess = which.min(mon[1:200, 'Tail_ESS'])
-plot_local_ess(fit = fit_tps, par = which_min_ess, nalpha = 10)
-
-plot_quantile_ess(fit = fit_tps, par = which_min_ess, nalpha = 50)
-
-plot_change_ess(fit = fit_tps, par = which_min_ess)
-
-check_rhat(fit_tps)
-check_treedepth(fit_tps, 12)
-check_energy(fit_tps)  #
-check_div(fit_tps)
-
-
-# Variance
-color_scheme_set("viridisE")
-#mcmc_rank_hist(fit, pars = c("sigma_beta_year", "sigma_beta_depth", "sigma_beta_trim", "sigma_beta_destine"), ref_line = TRUE)
-mcmc_rank_hist(fit_tps, pars = c("logalpha", "logsigma", "loglambda"), ref_line = TRUE)   # spatial random field
-
-
-## Extract marginal posteriors
-posterior <- as.matrix(fit)
-
-exp(mean(posterior[, "logalpha"]))
-exp(mean(posterior[, "logsigma"]))
-exp(mean(posterior[, "loglambda"]))
-
-exp(opt$par[3:5])
-
-
-dyn.unload(dynlib(m))
-
-
-# Simulating from the SIMULATE function
-mat_sim = matrix(data=NA, nrow=length(obj$simulate()$cpue_sim), ncol=10)
-mat_sim
-
-
-for(j in 1:ncol(mat_sim)){
-  for(i in 1:nrow(mat_sim)){
-    mat_sim[, j] = obj$simulate()$cpue_sim
-  }
-}
-mat_sim
-
-# Plot TPS model using Gamma likelihood
-hist(data$cpue, col = "gray90", prob = TRUE, main = "100 simulated samples", cex.main = 2, xlab = "", col.lab = 'blue', col.main="blue", cex.lab = 1.4, cex.axis = 1.2, ylim = c(0, 0.008))
-for (j in 1: ncol(mat_sim)){
-  lines(x = density(x = mat_sim[, j]),  lty="dotted", col="azure4", lwd=1)
-}
-#legend("topright", "A", bty = "n", text.col="blue", cex = 1.4)
-legend(6, 0.3, c("response", "simulations"), lwd=4, col=c("gray90", "azure4"), cex = 1.5)
