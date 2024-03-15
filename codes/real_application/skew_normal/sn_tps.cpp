@@ -40,32 +40,23 @@ Type objective_function<Type>::operator() ()
   //                 DATA
   //============================================
   DATA_INTEGER(likelihood);                    // the likelihood function to use
-  //DATA_INTEGER(model);                    // the likelihood function to use
-  DATA_VECTOR(cpue);                              // The response
-  
+  DATA_VECTOR(cpue);                           // The response
   DATA_FACTOR(year);             // year as a factor
   DATA_FACTOR(trim);             // trimester
   DATA_FACTOR(destine);          // destine
-  
   DATA_VECTOR(depth);
-  
-  
-   
-  DATA_MATRIX(TPS);                              // Design matrix for splines
-  
+    
+  DATA_MATRIX(TPS);                            // Design matrix for splines
   DATA_SPARSE_MATRIX(S);                       // Penalization matrix diag(S1,S2,S3,S4,S5) without storing off-diagonal zeros.
   DATA_IVECTOR(Sdims);                         // Dimensions of S1,S2,S3,S4 and S5
   DATA_SPARSE_MATRIX(tpsReport);               // Design matrix for report of splines
   
-  
-  //----------------------------------
   
   //============================================
   //                 PARAMETERS
   //============================================
   
   // Parameters for factors  
-  //PARAMETER_VECTOR(beta);	        // beta for trimester  (factor)
   PARAMETER(beta0);
   PARAMETER_VECTOR(beta_year);
   PARAMETER_VECTOR(beta_trim);
@@ -73,11 +64,9 @@ Type objective_function<Type>::operator() ()
   
   PARAMETER(beta_depth);
   
-  PARAMETER_VECTOR(smoothCoefs);               // Spline regression parameters
-  //PARAMETER_VECTOR(logalpha);                  // Penalization parameters
-  PARAMETER(loglambda);                  // Penalization parameters
+  PARAMETER_VECTOR(smoothCoefs);              // Spline regression parameters
+  PARAMETER(loglambda);                       // Penalization parameters
   PARAMETER(logsigma);                        // Penalizatiion parameter
-  
   PARAMETER(logomega);                        // skew normal parameter (slant)
   
   
@@ -85,8 +74,6 @@ Type objective_function<Type>::operator() ()
   //==========================================
   // Transformed parameters
   Type sigma  = exp(logsigma);
-  //Type lambda = exp(loglambda);
-  //vector<Type> alpha = exp(logalpha);
   Type lambda = exp(loglambda);
   Type omega = exp(logomega);
   
@@ -110,8 +97,6 @@ Type objective_function<Type>::operator() ()
   nlp-= dnorm(omega, Type(0.0),   Type(1.0), true);
   
     // Prior for smoothCoefs
-  //Type penalty = sigma/alpha;
-  
   nlp-= dnorm(smoothCoefs, Type(0.0), Type(1.0), true).sum(); 
   
   //==========================================
@@ -123,43 +108,17 @@ Type objective_function<Type>::operator() ()
     int m_i = Sdims(i);
     vector<Type> smoothCoefs_i = smoothCoefs.segment(k,m_i);       // Recover betai
     SparseMatrix<Type> S_i = S.block(k,k,m_i,m_i);  // Recover Si
-    //nll -= Type(0.5)*m_i*logalpha(i) - Type(0.5)*alpha(i)*GMRF(S_i).Quadform(smoothCoefs_i);
-    //nll -= Type(0.5)*m_i*logalpha - Type(0.5)*alpha*GMRF(S_i).Quadform(smoothCoefs_i);
     nll -= Type(0.5)*m_i*loglambda - Type(0.5)*lambda*GMRF(S_i).Quadform(smoothCoefs_i);
     k += m_i;
   }
   
-  
-  
-  
-  
-  // We create a vector of means
-  //mu = beta0 + beta_year(year) + beta_depth*depth + X*smoothCoefs;
-  
-  vector<Type> mu(cpue.size());
-  //mu = X*beta + TPS*smoothCoefs;
-  //mu = beta0 + beta_year(year) + beta_trim(trim) + beta_destine(destine) + beta_depth*depth + TPS*smoothCoefs;
 
+  // We create a vector of means
+  vector<Type> mu(cpue.size());
   mu = beta0 + beta_year(year) + beta_trim(trim) + beta_destine(destine) + beta_depth*depth + TPS*smoothCoefs;
-  //mu = exp(beta0 + beta_year(year) + beta_depth*depth + TPS*smoothCoefs);
   
   //===============================================================
   // log-likelihood for the response
-  
-  // int n = cpue.size();
-  // vector<Type> z = cpue - mu;  
-  // for( int i = 0; i<n ; i++){
-  //   // Skew-Normal case
-  //   if(likelihood==1)
-  //   nll -= dsn(z(i)/sigma, lambda, true) - log(sigma);
-  //   // Normal case
-  //   if(likelihood==2)
-  //   nll -= dlognorm(cpue(i), mu(i), sigma, true);
-  //   if(likelihood==3)
-  //   nll -= dgamma(cpue(i), 1/pow(sigma,2), exp(mu(i))*pow(sigma,2), true);
-  // }
-  
-// Probability of the data, given random effects (likelihood)
   int n = cpue.size();
   vector<Type> log_lik(n);
   vector<Type> z = cpue - mu;  
@@ -174,11 +133,9 @@ Type objective_function<Type>::operator() ()
   }
   nll = -log_lik.sum(); // total NLL  
   
-  //---------------------------------------------------------------
   
   
   // Simule data from the mu (only an experimental analysis because TMB not support rdsn)
-  // Simule data from the mu
   vector<Type> cpue_sim(n);
   for( int i=0; i<n; i++){
     //if(likelihood==2)
@@ -201,7 +158,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> splines2D = tpsReport*smoothCoefs;
   
   // Jacobian adjustment for transformed parameters
-  nll -= logsigma + logomega + loglambda;   // add logalpha? how?
+  nll -= logsigma + logomega + loglambda;   
   
   // Calculate joint negative log likelihood
   Type jnll = nll + nlp;
@@ -215,7 +172,6 @@ Type objective_function<Type>::operator() ()
   REPORT(beta0);
   REPORT(beta_year);
   REPORT(beta_depth);
-  //REPORT(logsigma);
   REPORT(loglambda);
   REPORT(logomega);
   REPORT(smoothCoefs);
