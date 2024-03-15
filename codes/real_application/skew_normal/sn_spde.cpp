@@ -99,8 +99,6 @@ Type objective_function<Type>::operator() ()
 //==========================================  
 // Priors
    Type nlp = Type(0.0);                                 // negative log prior  (priors)
-
-
    nlp-= dnorm(beta0,        Type(0.0), Type(5.0), true);
    nlp-= dnorm(beta_year,    Type(0.0), Type(1.0), true).sum();
    nlp-= dnorm(beta_trim,    Type(0.0), Type(1.0), true).sum();
@@ -145,20 +143,6 @@ Type objective_function<Type>::operator() ()
   nll_u += GMRF(Q)(u); // returns negative already
   
   
-  
-  // Probability of the data, given random effects (likelihood)
-  // vector<Type> z = cpue - mu;
-  // for( int i = 0; i<n ; i++){
-  //   // Skew-Normal case
-  //   if(likelihood==1)
-  //   nll -= dsn(z(i)/sigma, lambda, true) - log(sigma);
-  //   // Normal case
-  //   if(likelihood==2)
-  //   nll -= dnorm(cpue(i), mu(i), sigma, true);
-  //   if(likelihood==3)
-  //   nll -= dgamma(cpue(i), 1/pow(sigma,2), mu(i)*pow(sigma,2), true);
-  // }
-  
   // Probability of the data, given random effects (likelihood)
   vector<Type> log_lik(n);
   vector<Type> z = cpue - mu;  
@@ -174,13 +158,7 @@ Type objective_function<Type>::operator() ()
   nll = -log_lik.sum(); // total NLL  
   
   
-  // // Probability of data conditional on fixed effect values
-  // for(int i=0; i<n; i++){
-  //   // And the contribution of the likelihood
-  //   nll -= dnorm(y(i), mu(i), sigma, true);
-  // }
-  // 
-  
+ 
   // Simule data from mu
   vector<Type> y_sim(n);
   for( int i=0; i<n; i++){
@@ -205,7 +183,6 @@ Type objective_function<Type>::operator() ()
   //=====================================================================================================
   // Reporting
   REPORT(jnll);
-  //REPORT(beta);
   REPORT(u);
   REPORT(mu);
   REPORT(sigma);
@@ -218,7 +195,6 @@ Type objective_function<Type>::operator() ()
   
   //=======================================================================================================
   // AD report (standard devations)
-  //ADREPORT(beta)
   ADREPORT(sigma);
   ADREPORT(tau);
   ADREPORT(kappa);
