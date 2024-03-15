@@ -46,7 +46,7 @@ data$destine <- as.factor(data$destine)
 #======================================
 #                TMB data
 #======================================
-tmb_data = list(likelihood = 3,
+tmb_data = list(likelihood = 3,                                 # Skew normal likelihood
                 model = 2, 
                 cpue     = sqrt(as.vector(data$cpue)),          # Response
                 year = as.numeric(data$year) - 1,
