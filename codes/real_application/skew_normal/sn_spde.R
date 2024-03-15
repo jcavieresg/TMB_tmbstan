@@ -15,25 +15,16 @@ compile("sn_spde.cpp")
 dyn.load(dynlib("sn_spde"))
 
 
-
-
-
-
 #=============================================================================
 #                              Applied analysis
 #=============================================================================
 data = read.csv("north2.csv", header = T)
 head(data, 3)
 
-# data <- data[sample(nrow(data), 500), ]
-# dim(data)
-
-
 loc <- cbind(data$longitude, data$latitude)
 class(loc)
 dim(loc)
 
-#Define mesh and components representing the  precision matrix----
 bound1 <- inla.nonconvex.hull(loc)
 mesh = inla.mesh.create(loc, plot.delay=NULL, refine=TRUE, boundary = bound1)
 
@@ -41,8 +32,6 @@ plot(mesh)
 points(loc, col = "red", pch = 19)
 A = inla.spde.make.A(mesh,loc)
 spde = inla.spde2.matern(mesh, alpha=2)
-#spde = inla.spde2.pcmatern(mesh, alpha = 2, prior.range = c(5, 0.5), prior.sigma = c(5, 0.5))
-
 spde_mat = spde$param.inla[c("M0","M1","M2")]
 
 
