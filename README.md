@@ -2,8 +2,8 @@
 
 This repository contains the codes to reproduce the experiments in the articie.
 Folders:
-- sim: codes for the simulation experiments.
-- real: codes for the real application of the bayesian spatial models.
+- simulation: codes for the simulation study
+- real_application: codes for the Gamma and Skew normal models using an approximated GRF and TPS as spatial random effect.
 
   
 All the codes uses Template Model Builder (TMB) along with the library $\texttt{tmbstan}$.
