@@ -17,7 +17,6 @@ Type dcauchy(Type x, Type mean, Type shape, int give_log=0){
 template<class Type>
 Type objective_function<Type>::operator() ()
 {
-
   using namespace R_inla;
   using namespace density;
   using namespace Eigen;
@@ -32,23 +31,22 @@ Type objective_function<Type>::operator() ()
   //============================================
   //                 PARAMETERS
   //============================================
-  PARAMETER(beta0);            // intercept
-  PARAMETER(beta1);            // intercept
+  PARAMETER(beta0);            
+  PARAMETER(beta1);            
 
-  PARAMETER(logsigma);     // measurement noise 
+  PARAMETER(logsigma);     
 
   // spline things
-  PARAMETER_VECTOR(x);     // spline params
-  DATA_MATRIX(X);          // spline design matrix
-  DATA_SPARSE_MATRIX(S);   // smoothing penalty matrix
-  PARAMETER(loglambda);       // smoothing parameter
+  PARAMETER_VECTOR(x);     
+  DATA_MATRIX(X);          
+  DATA_SPARSE_MATRIX(S);   
+  PARAMETER(loglambda);    
 
   
   //==========================================
   // Transformed parameters
   Type sigma  = exp(logsigma);
   Type lambda = exp(loglambda);
-  
   SparseMatrix<Type> Q = lambda*S;   // precision for spline
   
   
@@ -64,9 +62,6 @@ Type objective_function<Type>::operator() ()
 
   // Penalty parameter
   nlp-= dnorm(lambda, Type(0.0),   Type(1.0), true);
-  //nlp-= dexp(lambda, Type(1.0), true);
-  
-  
   nlp-= dnorm(x, Type(0.0), Type(1.0), true).sum(); 
   
   
@@ -82,10 +77,7 @@ Type objective_function<Type>::operator() ()
   }
   Type nll = -log_lik.sum(); // total NLL
 
-  //Type nll = -sum(dnorm(y, mu, sigma, true));
-
-  
-  nll -= Type(0.5)*1.0*loglambda - 0.5*lambda*GMRF(S).Quadform(x);
+ nll -= Type(0.5)*1.0*loglambda - 0.5*lambda*GMRF(S).Quadform(x);
   
   
   // Simule data from the mu 
@@ -103,7 +95,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> pred = mu;
 
   // Jacobian adjustment for transformed parameters
-  nll -= logsigma + loglambda;   // add logalpha? how?
+  nll -= logsigma + loglambda; 
   
   // Calculate joint negative log likelihood
   Type jnll = nll + nlp;
