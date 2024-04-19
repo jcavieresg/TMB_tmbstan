@@ -1,12 +1,11 @@
 rm(list = ls())
-setwd("C:/Users/cavieresgaet/Desktop/tps_spde/new_codes/tps")
+setwd("")
 
 library(pacman)
 pacman::p_load(TMB, rSPDE, fmesher, INLA, dplyr, tmbstan, rstan, parallel,
                raster, ggplot2, grid, gridExtra)
 
 options(scipen=999)
-# Calculate the number of cores
 no_cores <- detectCores() - 1
 
 # #=================================================
@@ -104,13 +103,6 @@ obj3 <- run_tmb(300)
 obj4 <- run_tmb(400)
 obj5 <- run_tmb(500)
 obj6 <- run_tmb(600)
-
-obj1[[2]]$par
-obj2[[2]]$par
-obj3[[2]]$par
-obj4[[2]]$par
-obj5[[2]]$par
-obj6[[2]]$par
 
 #===========================================================================================
 #                                        Fit with tmbstan
@@ -254,13 +246,9 @@ mean(sapply(df6[, c(-1)], sd))
 p1 <- ggplot(df1, aes(y_sim)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 0.3, color="black", fill="grey") + theme_bw() +
   theme(axis.title.x = element_blank(),
-        #axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("Grid 1") + 
-  # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  #annotate("text", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "Grid 1", colour = "black", size = 10)
   annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP1", colour = "blue", size = 10)
 
 for (i in 2:ncol(df1)) {
@@ -275,35 +263,23 @@ for (i in 2:ncol(df1)) {
 p2 <- ggplot(df2, aes(y_sim)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 0.3, color="black", fill="grey") + theme_bw() +
   theme(axis.title.x = element_blank(),
-        #axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("SP 2") + 
-  # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 2", colour = "black", size = 7)
   annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP2", colour = "blue", size = 10)
 
-  
-  # geom_label(aes(x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 2", 
-  #                colour = "white", fontface = "bold"), fill = "black") 
 for (i in 2:ncol(df2)) {
   p2 <- p2 + stat_function(fun = dnorm, 
                          args = list(mean = mean(df2[, i]), 
                                      sd = sd(df2[, i])), lwd = 1, col = 'orange')}
 
 
-
-# Histogram with kernel density
 p3 <- ggplot(df3, aes(y_sim)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 0.3, color="black", fill="grey") + theme_bw() +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("SP 3") + 
-  # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  # annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 3", colour = "black", size = 7)
   annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP3", colour = "blue", size = 10)
 
 
@@ -313,17 +289,12 @@ for (i in 2:ncol(df3)) {
                                      sd = sd(df3[, i])), lwd = 1, col = 'orange')}
 
 
-
-# Histogram with kernel density
 p4 <- ggplot(df4, aes(y_sim)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 0.3, color="black", fill="grey") + theme_bw() +
   theme(axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("SP 4") + 
-  # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 4", colour = "black", size = 7)
   annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP4", colour = "blue", size = 10)
 
 for (i in 2:ncol(df4)) {
@@ -332,16 +303,12 @@ for (i in 2:ncol(df4)) {
                                      sd = sd(df4[, i])), lwd = 1, col = 'orange')}
 
 
-# Histogram with kernel density
 p5 <- ggplot(df5, aes(y_sim)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 0.3, color="black", fill="grey") + theme_bw() +
   theme(axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("SP 5") + 
-  # theme(plot.title = element_text(size = 22, hjust = 0.5))
-   #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 5", colour = "black", size = 7)
   annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP5", colour = "blue", size = 10)
 
 for (i in 2:ncol(df5)) {
@@ -350,18 +317,12 @@ for (i in 2:ncol(df5)) {
                                        sd = sd(df5[, i])), lwd = 1, col = 'orange')}
 
 
-
-# Histogram with kernel density
 p6 <- ggplot(df6, aes(y_sim)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 0.3, color="black", fill="grey") + theme_bw() +
   theme(axis.title.x = element_text(size = 16),
         axis.title.y = element_text(size = 16),
         legend.text = element_text(size = 14), 
         axis.text = element_text(size = 14)) +
-  # ggtitle("SP 6") + 
-  # theme(plot.title = element_text(size = 22, hjust = 0.5))
-  #annotate("label", x = -Inf, y = Inf, hjust = 0.05, vjust = 0.8, label = "SP 6", colour = "black", size = 7)
-  #annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.1, label = "SP 1", colour = "blue", size = 10)
   annotate("text", x = -Inf, y = Inf, hjust = -0.1, vjust = 1.2, label = "SP6", colour = "blue", size = 10)
 
   
@@ -372,43 +333,5 @@ for (i in 2:ncol(df6)) {
 
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3,
              top = textGrob("M-TPS", gp=gpar(fontsize=28,font=1)))
-
-
-#===============================================
-#          With face_wrap() function!
-#===============================================
-
-
-df1$SP <- ifelse(df1$y_sim<6.0, "SP1", "NA")
-df2$SP <- ifelse(df2$y_sim<6.0, "SP2", "NA")
-df3$SP <- ifelse(df3$y_sim<6.0, "SP3", "NA")
-df4$SP <- ifelse(df4$y_sim<6.0, "SP4", "NA")
-df5$SP <- ifelse(df5$y_sim<6.0, "SP5", "NA")
-df6$SP <- ifelse(df6$y_sim<6.0, "SP6", "NA")
-
-df_plot1 <- bind_rows(df1, df2, df3, df4, df5, df6)
-
-ptot1 <- ggplot(df_plot1, aes(y_sim)) +
-  geom_histogram(aes(y = after_stat(density)), binwidth = 0.3, color="black", fill="grey") + theme_bw() +
-  facet_wrap(~SP) +
-  theme(axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16),
-        legend.text = element_text(size = 14), 
-        axis.text = element_text(size = 14),
-        strip.text = element_text(size = 18)) 
-
-for (i in 2:ncol(df_plot1)-1) {
-  ptot1 <- ptot1 + stat_function(fun = dnorm, 
-                           args = list(mean = mean(df_plot1[, i]), 
-                                       sd = sd(df_plot1[, i])), lwd = 1, col = 'orange')}
-
-
-
-
-
-
-
-
-
 
 
