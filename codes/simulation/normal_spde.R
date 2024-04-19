@@ -1,5 +1,5 @@
 rm(list = ls())
-setwd("C:/Users/cavieresgaet/Desktop/tps_spde/new_codes/spde")
+setwd("")
 
 library(pacman)
 pacman::p_load(TMB, rSPDE, fmesher, INLA, dplyr, tmbstan, rstan, parallel,
@@ -9,9 +9,6 @@ options(scipen=999)
 
 # Calculate the number of cores
 no_cores <- parallelly::availableCores()  - 1
-
-
-
 
 #=================================================
 compile("normal_spde.cpp")
@@ -95,16 +92,6 @@ obj4 <- run_tmb(nloc = 400)
 obj5 <- run_tmb(nloc = 500)
 obj6 <- run_tmb(nloc = 600)
 
-
-obj1[[2]]$par
-obj2[[2]]$par
-obj3[[2]]$par
-obj4[[2]]$par
-obj5[[2]]$par
-obj6[[2]]$par
-
-
-
 #===========================================================================================
 #                                        Fit with tmbstan
 #===========================================================================================
@@ -121,7 +108,6 @@ M[[5]] = list()
 M[[5]]$model = "spatial_n500"
 M[[6]] = list()
 M[[6]]$model = "spatial_n600"
-
 
 
 M[[1]]$formula = obj1[[1]]
@@ -164,13 +150,6 @@ c_dark <- c("#8F2727")
 c_dark_highlight <- c("#7C0000")
 
 
-# M[[1]]$res <- readRDS('stan_spde_1.RDS')
-# M[[2]]$res <- readRDS('stan_spde_2.RDS')
-# M[[3]]$res <- readRDS('stan_spde_3.RDS')
-# M[[4]]$res <- readRDS('stan_spde_4.RDS')
-# M[[5]]$res <- readRDS('stan_spde_5.RDS')
-# M[[6]]$res <- readRDS('stan_spde_6.RDS')
-
 m1 <- readRDS('stan_spde_1.RDS')
 m2 <- readRDS('stan_spde_2.RDS')
 m3 <- readRDS('stan_spde_3.RDS')
@@ -194,7 +173,6 @@ sum2 = data.frame(mon2$mean, mon2$`25%`, mon2$`75%`)
 colnames(sum2) = c("mean", "25%", "75%")
 head(sum2)
 
-
 sum3 = data.frame(mon3$mean, mon3$`25%`, mon3$`75%`)
 colnames(sum3) = c("mean", "25%", "75%")
 head(sum3)
@@ -215,18 +193,12 @@ posterior_1 = as.matrix(M[[1]]$res)
 posterior_2 = as.matrix(M[[2]]$res)
 posterior_3 = as.matrix(M[[3]]$res)
 posterior_4 = as.matrix(M[[4]]$res)
-
-
-#traceplot(M[[1]]$res, pars=names(obj1$par), inc_warmup=TRUE)
-#traceplot(M[[2]]$res, pars=names(obj2$par), inc_warmup=TRUE)
-#traceplot(fit, pars=names(obj1$par), inc_warmup=TRUE)
-
-
+posterior_5 = as.matrix(M[[4]]$res)
+posterior_6 = as.matrix(M[[6]]$res)
 
 # Simulating from the SIMULATE function
 mat_sim = matrix(data=NA, nrow=length(obj6[[1]]$simulate()$y_sim), ncol=100)
 mat_sim
-
 
 for(j in 1:ncol(mat_sim)){
   for(i in 1:nrow(mat_sim)){
@@ -365,16 +337,4 @@ for (i in 2:ncol(df6)) {
 
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3,
              top = textGrob("M-GRF", gp=gpar(fontsize=28,font=1)))
-
-
-
-
-
-#load package
-require(MCMCvis)
-MCMCsummary(m1, round = 2)
-
-#pairs(fit, pars=names(fit)[-grep('beta0',names(fit))][1:10])
-pairs(m1, pars = c("logsigma_e", "logtau", "lp__"), las = 1) # below the diagonal
-pairs(m1, pars = c("logsigma_e", "logtau", "logkappa")) # below the diagonal
 
