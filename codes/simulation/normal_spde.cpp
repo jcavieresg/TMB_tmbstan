@@ -39,23 +39,6 @@ Type ldhalfnorm(Type x, Type var){
 }
 
 
-
-// helper function to make sparse SPDE precision matrix
-// Inputs:
-//    logkappa: log(kappa) parameter value
-//    logtau: log(tau) parameter value
-//    M0, M1, M2: these sparse matrices are output from R::INLA::inla.spde2.matern()$param.inla$M*
-// template<class Type>
-// SparseMatrix<Type> spde_Q(Type logkappa, Type logtau, SparseMatrix<Type> M0,
-//                           SparseMatrix<Type> M1, SparseMatrix<Type> M2) {
-//   SparseMatrix<Type> Q;
-//   Type kappa2 = exp(2. * logkappa);
-//   Type kappa4 = kappa2*kappa2;
-//   Q = pow(exp(logtau), 2.)  * (kappa4*M0 + Type(2.0)*kappa2*M1 + M2);
-//   return Q;
-// }
-
-
 //=====================================================
 // Initialize the TMB model
 //=====================================================
@@ -67,18 +50,14 @@ Type objective_function<Type>::operator() ()
   //=========================
   //      DATA SECTION
   //=========================
-  DATA_VECTOR(y);		              // Response
-  DATA_VECTOR(x1);                 // Fixed effects
-  //DATA_FACTOR(site);		          // Random effect index for observation i
-  DATA_STRUCT(spde_mat, spde_t);  // Three matrices needed for representing the GMRF, see p. 8 in Lindgren et al. (2011)
-  
-  DATA_SPARSE_MATRIX(A);          // used to project from spatial mesh to data locations
-  
+  DATA_VECTOR(y);		  
+  DATA_VECTOR(x1);                
+  DATA_STRUCT(spde_mat, spde_t);  
+  DATA_SPARSE_MATRIX(A);          
 
   //=========================
   //   PARAMETER SECTION
-  //=========================
-  
+  //=========================  
   // Fixed effects
   PARAMETER(beta0);
   PARAMETER(beta1);
@@ -89,13 +68,10 @@ Type objective_function<Type>::operator() ()
   
   PARAMETER_VECTOR(u);	          // spatial effects
   
-  
-  // Transformed parameters
+   // Transformed parameters
   Type sigma_e  = exp(logsigma_e);
   Type tau = exp(logtau);
   Type kappa = exp(logkappa);
-  
-  
   SparseMatrix<Type> Q = Q_spde(spde_mat, kappa);
   
 
@@ -105,8 +81,7 @@ Type objective_function<Type>::operator() ()
   Type nlp = 0.0;
   nlp -= dnorm(beta0,     Type(1.0),     Type(2.0), true);   //
   nlp -= dnorm(beta1,     Type(1.0),     Type(2.0), true);   //
-  // 
-  // // Prior on sigma
+  // Prior on sigma
   nlp -= dcauchy(sigma_e,   Type(0.0), Type(5.0), true);
   
   
@@ -117,23 +92,18 @@ Type objective_function<Type>::operator() ()
   //=============================================================================================================
   // Objective function is sum of negative log likelihood components
   int n = y.size();	                 // number of observations 
-
-  Type nll = 0.0;	                   // likelihood for the observations
-  Type nll_u = 0.0;		               // likelihood for the spatial effect
+  Type nll = 0.0;	                 // likelihood for the observations
+  Type nll_u = 0.0;		         // likelihood for the spatial effect
   
   
   // Linear predictor
   vector<Type> mu(n);
   mu  = beta0 + beta1*x1 + A*u;
-
-  //if(normalization==1)
-  //nll_u += GMRF(Q)(u); // returns negative already
   nll_u += SCALE(GMRF(Q), 1/ tau)(u); // returns negative already
   
   
   // Probability of data conditional on fixed effect values
   for(int i=0; i<n; i++){
-    // And the contribution of the likelihood
     nll -= dnorm(y(i), mu(i), sigma_e, true);
   }
   
@@ -164,7 +134,6 @@ Type objective_function<Type>::operator() ()
   //=====================================================================================================
   // Reporting
   REPORT(jnll);
-  //REPORT(beta);
   REPORT(beta0);
   REPORT(beta1);
   REPORT(u);
@@ -180,7 +149,6 @@ Type objective_function<Type>::operator() ()
   
   //=======================================================================================================
   // AD report (standard devations)
-  //ADREPORT(beta)
   ADREPORT(beta0);
   ADREPORT(beta1);
   ADREPORT(logsigma_e);
