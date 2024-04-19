@@ -5,5 +5,6 @@ Folders:
 - simulation: codes for the simulation study
 - real_application: codes for the Gamma and Skew normal models using an approximated GRF and TPS as spatial random effect.
 
-  
 All the codes uses Template Model Builder (TMB) along with the library $\texttt{tmbstan}$.
+
+NOTE: The data used for real applications are private. If you need it, please contact the main author of the paper.
