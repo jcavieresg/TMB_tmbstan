@@ -1,5 +1,5 @@
 rm(list = ls())
-setwd("C:/Users/Usuario/Desktop/tps_vs_spde/answers_reviewers/files_and_codes/sim3")
+setwd("")
 
 library(pacman)
 pacman::p_load(geoR, fields, prodlim, TMB, TMBhelper, mgcv, dplyr, tmbstan, parallel, MASS, Matrix,
