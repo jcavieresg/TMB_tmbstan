@@ -1,5 +1,5 @@
 rm(list = ls())
-setwd("C:/Users/cavieresgaet/Desktop/tps_spde/new_codes/tps")
+setwd("")
 
 library(pacman)
 pacman::p_load(geoR, fields, prodlim, TMB, TMBhelper, mgcv, dplyr, tmbstan, parallel, MASS, Matrix,
@@ -14,8 +14,8 @@ no_cores <- parallelly::availableCores()  - 1
 
 
 #=================================================
-compile("tps_fit_grf.cpp")
-dyn.load(dynlib("tps_fit_grf"))
+compile("tps_fit_grf_sim3.cpp")
+dyn.load(dynlib("tps_fit_grf_sim3"))
 #=================================================
 
 
