@@ -49,8 +49,7 @@ Type objective_function<Type>::operator() ()
   Type sigma  = exp(logsigma);
   Type lambda = exp(loglambda);
   
-  SparseMatrix<Type> Q = lambda*S;   // precision for spline
-  
+   
   
   //==========================================  
   // Priors
@@ -84,8 +83,8 @@ Type objective_function<Type>::operator() ()
 
   //Type nll = -sum(dnorm(y, mu, sigma, true));
 
-  
-  nll -= Type(0.5)*1.0*loglambda - 0.5*lambda*GMRF(S).Quadform(x);
+  int dim_x(x.size());
+  nll -= Type(0.5)*dim_x*loglambda - 0.5*lambda*GMRF(S).Quadform(x);
   
   
   // Simule data from the mu 
